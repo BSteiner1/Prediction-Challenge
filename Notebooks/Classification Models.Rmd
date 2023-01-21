@@ -1,0 +1,171 @@
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse) 
+library(gapminder) 
+library(broom)
+library(ggplot2)
+knitr::opts_chunk$set(echo = TRUE)
+library(yardstick)
+library(GGally)
+library(caret)
+library(randomForest)
+library(ipred)
+```
+
+```{r}
+# Import and view head of training data
+train_path <- "C:/Users/bbste/Documents/LSE/ST310/ST310-Individual-Project/Data/ST310_challenge1_train.csv"
+df_train <- read.csv(train_path)
+head(df)
+```
+```{r}
+# Import test data for comparing predictions
+test_path <- "C:/Users/bbste/Documents/LSE/ST310/ST310-Individual-Project/Data/ST310_challenge1_test.csv"
+df_test <- read.csv(test_path)
+head(df_test)
+```
+
+
+```{r}
+# Check for missing values
+sum(is.na(df_train))
+```
+We note that there are no missing values
+```{r}
+# Check the dimensions of the data
+dim(df_train)
+```
+```{r}
+y_value_1 <- length(which(df_train$y==1))
+y_value_0 <- length(which(df_train$y==0)) 
+```
+
+```{r}
+ggplot(data = df_train, aes(x = y)) + 
+  geom_bar(fill='red')
+```
+The outcome data looks relatively balanced although there are more instances of 0 than 1.
+
+```{r}
+corr_mat <- round(cor(df_train),2)
+ 
+# reduce the size of correlation matrix
+melted_corr_mat <- melt(corr_mat)
+# head(melted_corr_mat)
+ 
+# plotting the correlation heatmap
+library(ggplot2)
+ggplot(data = melted_corr_mat, aes(x=Var1, y=Var2,
+                                   fill=value)) +
+geom_tile()
+```
+We cannot infer too much from this but it seems that x3, x4, x5 are highly correlated
+
+```{r}
+# Set seed for reproducible results
+set.seed(1)
+
+# Split our data into Test and Train in an 80:20 ratio
+sample <- sample(c(TRUE, FALSE), nrow(df_train), replace=TRUE, prob=c(0.8,0.2))
+train  <- df_train[sample, ]
+test   <- df_train[!sample, ]
+```
+
+```{r}
+logistic_model <- glm(y ~ ., family = binomial(), data = train)
+logistic_model |> ggcoef()
+```
+```{r}
+# Create predictions (probabilities) using test data 
+predicted <- predict(logistic_model, test[,-1], type="response")
+predicted <- ifelse(predicted > 0.55, 1, 0)
+```
+
+```{r}
+table(test$y, predicted)
+```
+```{r}
+error_rate <- mean(predicted != test$y)
+error_rate
+```
+Model 2: Random Forest
+```{r}
+train$y <- as.factor(train$y)
+```
+
+```{r}
+# Train our Random Forest with 
+rf_model <- randomForest(train$y ~ ., data = train, ntree=1000)
+```
+
+```{r}
+# Predictions
+rf_predictions <- predict(rf_model, test, type="response")
+table(rf_predictions, test$y)
+```
+```{r}
+# Plot the error rate with the number of trees
+plot(rf_model)
+```
+This is an improvement from the logistic regression. However, I think we can do better with Bagging or Boosting so will not tune the Random Forest just yet.
+
+Model 3: Bagging
+The benefit of this algorithm is that it will help prevent overfitting since we have many predictors.
+```{r}
+# Fit the model
+bagging_model <- bagging(train$y~., data = train[,-1], coob = T, nbagg = 200)
+
+```
+
+```{r}
+bag_predictions <- predict(bagging_model, test[,-1])
+```
+
+```{r}
+table(test$y, bag_predictions)
+error_rate <- mean(bag_predictions != test$y)
+error_rate
+```
+
+```{r}
+# Define a vector of the number of trees to try
+ntrees <- c(1,2,3,4)
+
+# Fit a bagging model with different number of trees
+bagged_models <- lapply(ntrees, function(x) bagging(train$y~., data = train[,-1], ntree=x))
+```
+
+```{r}
+# Load the "glmnet" package
+library(glmnet)
+
+# Fit a lasso logistic regression model
+xmat <- model.matrix(y ~ ., data = train)[,-1]
+lasso_model <- glmnet(xmat, train$y, family="binomial", lambda=0.01, alpha = 1)
+
+test_as_matrix <- as.matrix(test)
+# Predict the class of the test data
+lasso_predictions <- predict(lasso_model, newx = test_as_matrix[,-1], type = "response")
+
+lasso_predictions <- ifelse(lasso_predictions > 0.5, 1,0)
+error_rate <- mean(lasso_predictions != test$y)
+error_rate
+```
+
+```{r}
+# Fit a lasso logistic regression model
+xmat <- model.matrix(y ~ ., data = train)[,-1]
+ridge_model <- glmnet(xmat, train$y, family="binomial", lambda=0.01, alpha = 0)
+```
+
+```{r}
+test_as_matrix <- as.matrix(test)
+# Predict the class of the test data
+ridge_predictions <- predict(ridge_model, newx = test_as_matrix[,-1], type = "response")
+```
+
+```{r}
+ridge_predictions <- ifelse(ridge_predictions > 0.55, 1,0)
+error_rate <- mean(ridge_predictions != test$y)
+error_rate
+```
