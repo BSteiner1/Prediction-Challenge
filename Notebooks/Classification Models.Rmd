@@ -16,7 +16,7 @@ library(ipred)
 # Import and view head of training data
 train_path <- "C:/Users/bbste/Documents/LSE/ST310/ST310-Individual-Project/Data/ST310_challenge1_train.csv"
 df_train <- read.csv(train_path)
-head(df)
+head(df_train)
 ```
 ```{r}
 # Import test data for comparing predictions
@@ -113,7 +113,7 @@ Model 3: Bagging
 The benefit of this algorithm is that it will help prevent overfitting since we have many predictors.
 ```{r}
 # Fit the model
-bagging_model <- bagging(train$y~., data = train[,-1], coob = T, nbagg = 200)
+bagging_model <- bagging(train$y~., data = train[,-1], coob = T, nbagg = 100)
 
 ```
 
