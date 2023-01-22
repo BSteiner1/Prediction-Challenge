@@ -1,0 +1,144 @@
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse) 
+library(gapminder) 
+library(broom)
+library(ggplot2)
+library(reshape2)
+knitr::opts_chunk$set(echo = TRUE)
+library(yardstick)
+library(GGally)
+library(knitr)
+library(caret)
+library(glmnet)
+library(randomForest)
+library(ipred)
+```
+
+```{r}
+# Import and view head of training data
+train_path <- "C:/Users/bbste/Documents/LSE/ST310/ST310-Individual-Project/Data/ST310_challenge2_train.csv"
+df_train <- read.csv(train_path)
+head(df_train)
+```
+
+```{r}
+dim(df_train)
+```
+We see that we are in the high-dimensional setting (p>n) so must use methods that allow this case (i.e not OLS)
+
+```{r}
+# Import test data for comparing predictions
+test_path <- "C:/Users/bbste/Documents/LSE/ST310/ST310-Individual-Project/Data/ST310_challenge2_test.csv"
+df_test <- read.csv(test_path)
+head(df_test)
+```
+
+
+```{r}
+# Check for missing values
+sum(is.na(df_train))
+```
+We note that there are no missing values.
+
+```{r}
+# Set seed for reproducible results
+set.seed(1)
+
+# Split our data into Test and Train in an 80:20 ratio
+sample <- sample(c(TRUE, FALSE), nrow(df_train), replace=TRUE, prob=c(0.8,0.2))
+train  <- df_train[sample, ]
+test   <- df_train[!sample, ]
+```
+
+Model 2: Random Forest
+
+```{r}
+# Train our Random Forest with 
+rf_model <- randomForest(train$y ~ ., data = train[,-1], ntree=100)
+
+# Random Forest predictions
+rf_predictions <- predict(rf_model, test, type="response")
+
+# Calculate Random Forest MSE
+rf_MSE <- (test$y - rf_predictions)**2 |> mean()
+rf_MSE
+```
+
+
+```{r}
+# Plot the error rate with the number of trees
+plot(rf_model)
+```
+This is an improvement from the logistic regression. However, I think we can do better with Bagging or Boosting so will not tune the Random Forest just yet.
+
+Model 3: Bagging
+The benefit of this algorithm is that it will help prevent overfitting since we have many predictors.
+```{r}
+# Fit the model
+bagging_model <- bagging(train$y~., data = train[,-1], coob = T, nbagg = 100 )
+
+# Create Bagging Predictions
+bag_predictions <- predict(bagging_model, test[,-1])
+
+# Calculate Random Forest MSE
+bagging_MSE <- (test$y - bag_predictions)**2 |> mean()
+bagging_MSE
+```
+
+```{r}
+test_as_matrix <- as.matrix(test)
+```
+
+```{r}
+# Fit a Ridge model
+ridge_model <- glmnet(train[-1], train$y, alpha = 0, lambda = 0.1)
+
+# Predict the class of the test data
+ridge_predictions <- predict(ridge_model, newx = test_as_matrix[,-1], type = "response")
+
+ridge_MSE <- (test$y - ridge_predictions)**2 |> mean()
+ridge_MSE
+```
+
+```{r}
+# Fit a Lasso model
+lasso_model <- glmnet(train[-1], train$y, alpha = 1, lambda = 0.1)
+
+# Predict the class of the test data
+lasso_predictions <- predict(lasso_model, newx = test_as_matrix[,-1], type = "response")
+
+lasso_MSE <- (test$y - lasso_predictions)**2 |> mean()
+lasso_MSE
+```
+
+```{r}
+train_as_matrix <- as.matrix(train)
+cvfit <- cv.glmnet(train_as_matrix[,-1], train$y)
+plot(cvfit)
+```
+```{r}
+# Create predictions using lambda one standard deviation higher than the minimum (to prevent overfitting)
+lasso_min_predictions <- predict(cvfit, newx = test_as_matrix[,-1], s = "lambda.min")
+
+lasso_min_MSE <- (test$y - lasso_min_predictions)**2 |> mean()
+lasso_min_MSE
+```
+
+
+```{r}
+# Create predictions using lambda one standard deviation higher than the minimum (to prevent overfitting)
+lasso_1se_predictions <- predict(cvfit, newx = test_as_matrix[,-1], s = "lambda.1se")
+
+lasso_1se_MSE <- (test$y - lasso_1se_predictions)**2 |> mean()
+lasso_1se_MSE
+```
+
+```{r}
+error_rates <- cbind(lasso_1se_MSE, lasso_min_MSE, ridge_MSE, rf_MSE, bagging_MSE)
+colnames(error_rates) <- c("Lasso 1se", "Lasso Min.", "Ridge", "Random Forest", "Bagging")
+error_rates |>
+  kable()
+```
+
+
