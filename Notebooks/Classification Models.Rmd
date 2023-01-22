@@ -4,10 +4,13 @@ library(tidyverse)
 library(gapminder) 
 library(broom)
 library(ggplot2)
+library(reshape2)
 knitr::opts_chunk$set(echo = TRUE)
 library(yardstick)
 library(GGally)
+library(knitr)
 library(caret)
+library(glmnet)
 library(randomForest)
 library(ipred)
 ```
@@ -72,21 +75,21 @@ test   <- df_train[!sample, ]
 ```
 
 ```{r}
-logistic_model <- glm(y ~ ., family = binomial(), data = train)
+logistic_model <- glm(train$y ~ ., family = binomial(), data = train[,-1])
 logistic_model |> ggcoef()
 ```
 ```{r}
 # Create predictions (probabilities) using test data 
-predicted <- predict(logistic_model, test[,-1], type="response")
-predicted <- ifelse(predicted > 0.55, 1, 0)
+logistic_predicted <- predict(logistic_model, test[,-1], type="response")
+logistic_predicted <- ifelse(logistic_predicted > 0.55, 1, 0)
 ```
 
 ```{r}
-table(test$y, predicted)
+table(test$y, logistic_predicted)
 ```
 ```{r}
-error_rate <- mean(predicted != test$y)
-error_rate
+logistic_error_rate <- mean(logistic_predicted != test$y)
+logistic_error_rate
 ```
 Model 2: Random Forest
 ```{r}
@@ -95,7 +98,7 @@ train$y <- as.factor(train$y)
 
 ```{r}
 # Train our Random Forest with 
-rf_model <- randomForest(train$y ~ ., data = train, ntree=1000)
+rf_model <- randomForest(train$y ~ ., data = train[,-1], ntree=500)
 ```
 
 ```{r}
@@ -103,6 +106,13 @@ rf_model <- randomForest(train$y ~ ., data = train, ntree=1000)
 rf_predictions <- predict(rf_model, test, type="response")
 table(rf_predictions, test$y)
 ```
+
+```{r}
+rf_error_rate <- mean(rf_predictions != test$y)
+rf_error_rate
+```
+
+
 ```{r}
 # Plot the error rate with the number of trees
 plot(rf_model)
@@ -113,8 +123,7 @@ Model 3: Bagging
 The benefit of this algorithm is that it will help prevent overfitting since we have many predictors.
 ```{r}
 # Fit the model
-bagging_model <- bagging(train$y~., data = train[,-1], coob = T, nbagg = 100)
-
+bagging_model <- bagging(train$y~., data = train[,-1], coob = T, nbagg = 200 )
 ```
 
 ```{r}
@@ -123,33 +132,26 @@ bag_predictions <- predict(bagging_model, test[,-1])
 
 ```{r}
 table(test$y, bag_predictions)
-error_rate <- mean(bag_predictions != test$y)
-error_rate
+bagging_error_rate <- mean(bag_predictions != test$y)
+bagging_error_rate
 ```
 
 ```{r}
-# Define a vector of the number of trees to try
-ntrees <- c(1,2,3,4)
-
-# Fit a bagging model with different number of trees
-bagged_models <- lapply(ntrees, function(x) bagging(train$y~., data = train[,-1], ntree=x))
-```
-
-```{r}
-# Load the "glmnet" package
-library(glmnet)
-
 # Fit a lasso logistic regression model
 xmat <- model.matrix(y ~ ., data = train)[,-1]
 lasso_model <- glmnet(xmat, train$y, family="binomial", lambda=0.01, alpha = 1)
+```
 
+```{r}
 test_as_matrix <- as.matrix(test)
 # Predict the class of the test data
 lasso_predictions <- predict(lasso_model, newx = test_as_matrix[,-1], type = "response")
+```
 
+```{r}
 lasso_predictions <- ifelse(lasso_predictions > 0.5, 1,0)
-error_rate <- mean(lasso_predictions != test$y)
-error_rate
+lasso_error_rate <- mean(lasso_predictions != test$y)
+lasso_error_rate
 ```
 
 ```{r}
@@ -166,6 +168,15 @@ ridge_predictions <- predict(ridge_model, newx = test_as_matrix[,-1], type = "re
 
 ```{r}
 ridge_predictions <- ifelse(ridge_predictions > 0.55, 1,0)
-error_rate <- mean(ridge_predictions != test$y)
-error_rate
+ridge_error_rate <- mean(ridge_predictions != test$y)
+ridge_error_rate
 ```
+
+```{r}
+error_rates <- cbind(logistic_error_rate, ridge_error_rate, lasso_error_rate, rf_error_rate, bagging_error_rate)
+colnames(error_rates) <- c("Logistic", "Ridge", "Lasso", "Random Forest", "Bagging")
+error_rates |>
+  kable()
+```
+
+
