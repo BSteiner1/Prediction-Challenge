@@ -1,3 +1,8 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+---
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse) 
@@ -241,3 +246,38 @@ head(error_df)
 ```{r}
 colMeans(error_df)[2:3]
 ```
+
+We will now use our final model to create predictions and export to a csv file.
+
+```{r}
+# Import the test data 
+final_test_path <- "C:/Users/bbste/Documents/LSE/ST310/ST310-Individual-Project/Data/ST310_challenge1_test.csv"
+df_final_test <- read.csv(final_test_path)
+head(df_final_test)
+```
+
+
+```{r}
+# We will choose the Random Forest model with 200 trees as our final model
+final_model <- rf_model
+
+#Create final predictions
+final_predictions <- predict(rf_model, df_final_test, type="response")
+head(final_predictions)
+```
+```{r}
+# DataFrame of predictions
+
+predictions_df <- data.frame("Prediction" = final_predictions)
+head(predictions_df)
+```
+
+
+```{r}
+# Export predictions to .csv file
+write.csv(predictions_df, "../Predictions/challenge1_44199.csv", row.names=FALSE)
+```
+
+
+
+
