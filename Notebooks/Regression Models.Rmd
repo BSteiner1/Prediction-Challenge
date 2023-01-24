@@ -140,5 +140,61 @@ colnames(error_rates) <- c("Lasso 1se", "Lasso Min.", "Ridge", "Random Forest", 
 error_rates |>
   kable()
 ```
+Perform Cross-Validation to compare whether the minimum lambda or 1se lambda has a lower average MSE.
+We will change the seed as this will alter the training and test data each time.
+
+```{r}
+error_list_seeds <- function(){
+  se_list <- c()
+  min_list <- c()
+  
+  for(i in 1:20){
+    set.seed(i)
+  
+    # Split our data into Test and Train in an 80:20 ratio
+    sample <- sample(c(TRUE, FALSE), nrow(df_train), replace=TRUE, prob=c(0.8,0.2))
+    train  <- df_train[sample, ]
+    test   <- df_train[!sample, ]
+    
+    train_as_matrix <- as.matrix(train)
+    test_as_matrix <- as.matrix(test)
+    
+    cvfit <- cv.glmnet(train_as_matrix[,-1], train$y)
+    
+    # Create predictions using lambda that minimises MSE
+    lasso_min_predictions <- predict(cvfit, newx = test_as_matrix[,-1], s = "lambda.min")
+    lasso_min_MSE <- (test$y - lasso_min_predictions)**2 |> mean()
+    
+    # Create predictions using lambda one standard deviation higher than the minimum (to prevent overfitting)
+    lasso_1se_predictions <- predict(cvfit, newx = test_as_matrix[,-1], s = "lambda.1se")
+    lasso_1se_MSE <- (test$y - lasso_1se_predictions)**2 |> mean()
+  
+    
+    se_list <- append(se_list, lasso_1se_MSE)
+    min_list <- append(min_list, lasso_min_MSE)
+    
+  }
+  
+
+  lists <- list("min" = min_list, "se" = se_list)
+  return(lists)
+}
+
+```
+
+```{r}
+min_list <- error_list_seeds()$min
+se_list <- error_list_seeds()$se
+```
+
+
+```{r}
+error_df <- data.frame (seq(1,10), min_list, se_list)
+head(error_df)
+```
+
+```{r}
+colMeans(error_df)[2:3]
+```
 
 
