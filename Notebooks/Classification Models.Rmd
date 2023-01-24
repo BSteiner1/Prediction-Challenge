@@ -93,13 +93,12 @@ logistic_error_rate
 ```
 Model 2: Random Forest
 ```{r}
+# Train our Random Forest with 
 train$y <- as.factor(train$y)
+
+rf_model <- randomForest(train$y ~ ., data = train[,-1], ntree=200)
 ```
 
-```{r}
-# Train our Random Forest with 
-rf_model <- randomForest(train$y ~ ., data = train[,-1], ntree=500)
-```
 
 ```{r}
 # Predictions
@@ -110,6 +109,9 @@ table(rf_predictions, test$y)
 ```{r}
 rf_error_rate <- mean(rf_predictions != test$y)
 rf_error_rate
+```
+```{r}
+plot(rf_model)
 ```
 
 
@@ -178,5 +180,64 @@ colnames(error_rates) <- c("Logistic", "Ridge", "Lasso", "Random Forest", "Baggi
 error_rates |>
   kable()
 ```
+We see that Random Forests and Bagging perform the best, so we will now do some Cross-Validation to decide which one to use as the final model.
 
+```{r}
+error_list_seeds <- function(){
+  rf_list <- c()
+  bag_list <- c()
+  
+  for(i in 1:3){
+    set.seed(i)
+  
+    # Split our data into Test and Train in an 80:20 ratio
+    sample <- sample(c(TRUE, FALSE), nrow(df_train), replace=TRUE, prob=c(0.8,0.2))
+    train  <- df_train[sample, ]
+    test   <- df_train[!sample, ]
+    
+    train_as_matrix <- as.matrix(train)
+    test_as_matrix <- as.matrix(test)
+    
+    train$y <- as.factor(train$y)
 
+    rf_model <- randomForest(train$y ~ ., data = train[,-1], ntree=200)
+
+    # Predictions
+    rf_predictions <- predict(rf_model, test, type="response")
+
+    rf_error_rate <- mean(rf_predictions != test$y)
+    rf_error_rate
+    
+    # Fit the model
+    bagging_model <- bagging(train$y~., data = train[,-1], coob = T, nbagg = 200)
+
+    bag_predictions <- predict(bagging_model, test[,-1])
+    bagging_error_rate <- mean(bag_predictions != test$y)
+    bagging_error_rate
+  
+    
+    rf_list <- append(rf_list, rf_error_rate)
+    bag_list <- append(bag_list, bagging_error_rate)
+    
+  }
+  
+
+  lists <- list("rf" = rf_list, "bag" = bag_list)
+  return(lists)
+}
+
+```
+
+```{r}
+rf_list <- error_list_seeds()$rf
+bag_list <- error_list_seeds()$bag
+```
+
+```{r}
+error_df <- data.frame (seq(1,3), rf_list, bag_list)
+head(error_df)
+```
+
+```{r}
+colMeans(error_df)[2:3]
+```
