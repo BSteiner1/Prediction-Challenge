@@ -19,7 +19,7 @@ library(ipred)
 # Import and view head of training data
 train_path <- "C:/Users/bbste/Documents/LSE/ST310/ST310-Individual-Project/Data/ST310_challenge2_train.csv"
 df_train <- read.csv(train_path)
-head(df_train)
+#head(df_train)
 ```
 
 ```{r}
@@ -31,7 +31,7 @@ We see that we are in the high-dimensional setting (p>n) so must use methods tha
 # Import test data for comparing predictions
 test_path <- "C:/Users/bbste/Documents/LSE/ST310/ST310-Individual-Project/Data/ST310_challenge2_test.csv"
 df_test <- read.csv(test_path)
-head(df_test)
+#head(df_test)
 ```
 
 
@@ -70,6 +70,7 @@ rf_MSE
 # Plot the error rate with the number of trees
 plot(rf_model)
 ```
+
 This is an improvement from the logistic regression. However, I think we can do better with Bagging or Boosting so will not tune the Random Forest just yet.
 
 Model 3: Bagging
@@ -189,7 +190,7 @@ se_list <- error_list_seeds()$se
 
 
 ```{r}
-error_df <- data.frame (seq(1,10), min_list, se_list)
+error_df <- data.frame (seq(1,20), min_list, se_list)
 head(error_df)
 ```
 
@@ -197,4 +198,35 @@ head(error_df)
 colMeans(error_df)[2:3]
 ```
 
+We will now use our final model to create predictions and export to a csv file.
 
+```{r}
+# Import the test data 
+final_test_path <- "C:/Users/bbste/Documents/LSE/ST310/ST310-Individual-Project/Data/ST310_challenge2_test.csv"
+df_final_test <- read.csv(final_test_path)
+head(df_final_test)
+```
+
+
+```{r}
+# We will choose the Random Forest model with 200 trees as our final model
+df_final_test <- as.matrix(df_final_test)
+final_predictions <- predict(cvfit, newx = df_final_test, s = "lambda.1se")
+head(final_predictions)
+```
+
+```{r}
+# DataFrame of predictions
+
+predictions_df <- data.frame("Prediction" = final_predictions)
+
+# Rename the column 
+colnames(predictions_df)[1] <- 'Prediction'
+head(predictions_df)
+```
+
+
+```{r}
+# Export predictions to .csv file
+write.csv(predictions_df, "../Predictions/challenge2_44199.csv", row.names=FALSE)
+```
