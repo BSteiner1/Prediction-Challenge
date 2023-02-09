@@ -204,14 +204,14 @@ We will now use our final model to create predictions and export to a csv file.
 # Import the test data 
 final_test_path <- "C:/Users/bbste/Documents/LSE/ST310/ST310-Individual-Project/Data/ST310_challenge2_test.csv"
 df_final_test <- read.csv(final_test_path)
-head(df_final_test)
+#head(df_final_test)
 ```
 
 
 ```{r}
-# We will choose the Random Forest model with 200 trees as our final model
+# We will choose the Lasso model with lambda that minimises MSE
 df_final_test <- as.matrix(df_final_test)
-final_predictions <- predict(cvfit, newx = df_final_test, s = "lambda.1se")
+final_predictions <- predict(cvfit, newx = df_final_test, s = "lambda.min")
 head(final_predictions)
 ```
 
