@@ -1,7 +1,7 @@
 ---
 output:
-  pdf_document: default
   html_document: default
+  pdf_document: default
 ---
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -24,13 +24,14 @@ library(ipred)
 # Import and view head of training data
 train_path <- "C:/Users/bbste/Documents/LSE/ST310/ST310-Individual-Project/Data/ST310_challenge1_train.csv"
 df_train <- read.csv(train_path)
-head(df_train)
+#head(df_train)
 ```
+
 ```{r}
 # Import test data for comparing predictions
 test_path <- "C:/Users/bbste/Documents/LSE/ST310/ST310-Individual-Project/Data/ST310_challenge1_test.csv"
 df_test <- read.csv(test_path)
-head(df_test)
+#head(df_test)
 ```
 
 
@@ -115,10 +116,6 @@ table(rf_predictions, test$y)
 rf_error_rate <- mean(rf_predictions != test$y)
 rf_error_rate
 ```
-```{r}
-plot(rf_model)
-```
-
 
 ```{r}
 # Plot the error rate with the number of trees
@@ -240,7 +237,7 @@ bag_list <- error_list_seeds()$bag
 
 ```{r}
 error_df <- data.frame (seq(1,3), rf_list, bag_list)
-head(error_df)
+#head(error_df)
 ```
 
 ```{r}
@@ -253,7 +250,7 @@ We will now use our final model to create predictions and export to a csv file.
 # Import the test data 
 final_test_path <- "C:/Users/bbste/Documents/LSE/ST310/ST310-Individual-Project/Data/ST310_challenge1_test.csv"
 df_final_test <- read.csv(final_test_path)
-head(df_final_test)
+#head(df_final_test)
 ```
 
 
@@ -263,13 +260,14 @@ final_model <- rf_model
 
 #Create final predictions
 final_predictions <- predict(rf_model, df_final_test, type="response")
-head(final_predictions)
+# head(final_predictions)
 ```
+
 ```{r}
 # DataFrame of predictions
 
 predictions_df <- data.frame("Prediction" = final_predictions)
-head(predictions_df)
+#head(predictions_df)
 ```
 
 
