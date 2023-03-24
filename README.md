@@ -1,5 +1,10 @@
 # ST310-Individual-Project
 
+
+[Classification-Models.pdf](https://github.com/BSteiner1/ST310-Individual-Project/files/11063211/Classification-Models.pdf)
+
+[Regression-Models.pdf](https://github.com/BSteiner1/ST310-Individual-Project/files/11063218/Regression-Models.pdf)
+
 ### :crystal_ball: A Coursework Prediction Challenge 
 
 #### :one: Challenge One: 
